@@ -1,0 +1,73 @@
+version: '3'
+
+services:
+  kdc:
+    build:
+      context: .
+      dockerfile: ./docker/kdc/Dockerfile
+    image: krb5-kdc
+    container_name: krb5-kdc
+    hostname: kdc
+    domainname: example.com
+    volumes:
+      - postgresql:/etc/keytabs/postgresql
+      - client:/etc/keytabs/client
+    networks:
+      default:
+        aliases:
+          - kdc.example.com
+    expose:
+      - "88"
+      - "749"
+    ports:
+      - 1088:88
+      - 1749:749
+
+  client:
+    build:
+      context: .
+      dockerfile: ./docker/client/Dockerfile
+    image: krb5-client
+    container_name: krb5-client
+    hostname: client
+    domainname: example.com
+    volumes:
+      - client:/etc/keytabs/client
+    networks:
+      default:
+        aliases:
+          - client.example.com
+    environment:
+      - JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+
+  postgresql:
+    build:
+      context: .
+      dockerfile: ./docker/postgresql/Dockerfile
+    image: krb5-postgresql
+    container_name: krb5-postgresql
+    hostname: postgresql
+    domainname: example.com
+    volumes:
+      - postgresql:/etc/keytabs/postgresql
+      - ./docker/postgresql/files/pg_hba.conf:/var/lib/postgres/pg_hba.conf
+      - ./docker/postgresql/files/pg_ident.conf:/var/lib/postgres/pg_ident.conf
+      - ./docker/postgresql/files/init.sh:/docker-entrypoint-initdb.d/00-init.sh
+    environment:
+      - POSTGRES_USER=kuser
+      - POSTGRES_PASSWORD=kuser
+    networks:
+      default:
+        aliases:
+          - postgresql.example.com
+    expose:
+      - "5432"
+    ports:
+      - 6432:5432
+
+volumes:
+  postgresql:
+  client:
+
+networks:
+  default:
